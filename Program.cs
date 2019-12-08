@@ -15,7 +15,11 @@ namespace ConsoleSnowSim {
         private double yPos = 0;
         private int oldXPos = 0;
         private int oldYPos = 0;
+        private double depthAtFlake = 0;
         private bool updateOldPos = true;
+
+        public event EventHandler ReachedBottom;
+
 
 
         /// <summary>
@@ -26,20 +30,25 @@ namespace ConsoleSnowSim {
         //This and the height properties will fail if value == 2x WindowWidth, but we'll never do that so we ignore it.
         public double XPos { 
             set {
-                if ((int)Math.Round(value) >= Console.WindowWidth)
+                if (((int)Math.Round(value)) >= Console.WindowWidth)
                     xPos = value - Console.WindowWidth;
-                else if ((int)Math.Round(value) < 0)
+                else if (((int)Math.Round(value)) < 0) {
                     xPos = Console.WindowWidth + value;
-                else
+                    if (((int)Math.Round(value)) >= Console.WindowWidth)
+                        xPos--;
+                } else
                     xPos = value;
             } 
             get { return xPos; } 
         }
+
+
         public double YPos {
             set {
-                if ((int)Math.Round(value) >= Console.WindowHeight)
-                    yPos = value - Console.WindowHeight;
-                else if ((int)Math.Round(value) < 0)
+                if ((int)Math.Round(value) >= (Console.WindowHeight - depthAtFlake)) {
+                    yPos = Console.WindowHeight - value;
+                    ReachedBottom?.Invoke(this, EventArgs.Empty);
+                } else if ((int)Math.Round(value) < 0)
                     yPos = Console.WindowHeight + value;
                 else
                     yPos = value;
@@ -100,7 +109,8 @@ namespace ConsoleSnowSim {
         /// Update snowflake position
         /// </summary>
         /// <param name="WindForce">Amount of wind to apply to x position</param>
-        public void Tick(double WindForce = 0) {
+        public void Tick(double WindForce = 0, double depth = 0) {
+            depthAtFlake = depth;
             //Update old position before over-writing it so we can cleanly erase old snowflake
             if (updateOldPos) {
                 oldXPos = (int)Math.Round(xPos);
@@ -117,14 +127,22 @@ namespace ConsoleSnowSim {
             add += 0.5 / (Weight+1);
 
             YPos += add;
-
+            double windpos = XPos;
+            double force = 0;
             //if we have wind, apply it. Less force for background layers, more force for fluffy snowflakes
-            if (WindForce != 0)
-                XPos += Math.Round(WindForce / layer) - (0.5 / (Weight + 1));
+            if (WindForce != 0) {
+                force = Math.Round(WindForce / layer) - (0.5 / (Weight + 1));
+                XPos += force;
+            }
 
             //Randomly shift the flake around one tile left or right to make it look more natural
+            double shiftPos = XPos;
             if (rng.Next(0, 50) == 0) {
                 XPos += (rng.Next(0, 2) == 0 ? -1 : 1);
+            }
+            double fuckPos = XPos;
+            if ((int)Math.Round(XPos) >= 120) {
+                Console.WriteLine("What the fuck");
             }
         }
 
@@ -134,16 +152,144 @@ namespace ConsoleSnowSim {
 
     }
 
+    class SnowPile {
+        private List<double> piles = new List<double>();
+
+        public SnowPile() {
+            for (int i = 0; i < Console.WindowWidth; i++) {
+                piles.Add(0);
+            }
+        }
+
+        public SnowPile(bool t) {
+            piles =  new List<double>(new double [] {0,0,0,0,0,0,0,0,0,0,1,2,1,0,0,0,0,0,0,0,1,0,0,0,0,1,2,0,0,0,0,0,0,0,1,1,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0});
+        }
+
+        public double DepthAtFlake(Snowflake flake) {
+            return piles[(int)Math.Round(flake.XPos)] + 1;
+        }
+
+        public void AddFlake(Snowflake toAdd) {
+            //return;
+            int pos = (int)Math.Round(toAdd.XPos);
+            if (pos == Console.WindowWidth)
+                pos = 0;
+
+            piles[pos] += 0.2;
+            int lPos= (pos != 0 ? pos - 1 : piles.Count - 1);
+            int rPos = (pos != Console.WindowWidth -1 ? pos + 1 : 0);
+            
+            while (piles[pos] - piles[lPos] > 1) {
+                piles[lPos]++;
+                piles[pos]--;
+            }
+            while (piles[pos] - piles[rPos] > 1) {
+                piles[rPos]++;
+                piles[pos]--;
+            }
+        }
+
+        public void Melt() {
+            int ind = new Random().Next(0, piles.Count);
+            if (piles[ind] > 0)
+                piles[ind]--;
+        }
+
+        public void Display() {
+            int xPos = 0;
+            foreach (double pile in piles) {
+                Console.CursorLeft = xPos;
+
+                int y = Console.WindowHeight-1;
+                int limit = y - (int)Math.Floor(pile);
+                while (y > limit) {
+                    Console.CursorTop = y;
+                    Console.Write("#");
+                    Console.CursorLeft -= 1;
+                    y--;
+                }
+
+                Char snow = ' ';
+                double dec = pile - Math.Truncate(pile);
+                if (dec < 0.25)
+                    snow = '.';//'░';
+                else if (dec >= 0.25 && dec < 0.5)
+                    snow = '+';// '▒';
+                else if (dec >= 0.5 && dec < 0.75)
+                    snow = '%';// '▓';
+                else
+                    snow = '#';// '█';
+
+                Console.CursorTop = y;
+                Console.Write(snow);
+                Console.CursorLeft -= 1;
+
+                //y--;
+                Console.CursorTop = y - 1;
+
+                int lHight = (int)Math.Truncate(xPos != 0 ? piles[xPos - 1] : piles[piles.Count - 1]);
+                int cHight = (int)Math.Truncate(piles[xPos]);
+                int rHight = (int)Math.Truncate(xPos != Console.WindowWidth - 1 ? piles[xPos + 1] : piles[Console.WindowWidth - 1]);
+                if (cHight == rHight && lHight == cHight)
+                    Console.Write("_");
+                else if (cHight < rHight) {
+                    if (lHight == cHight || lHight < cHight)
+                        Console.Write("/");
+                    else if (cHight < lHight)
+                        Console.Write("V");
+                    else
+                        Console.Write("_");
+                } else if (cHight > rHight) {
+                    if (lHight > cHight)
+                        Console.Write("\\");
+                    else
+                        Console.Write("_");
+                } else if (cHight < lHight) {
+                    if (rHight == cHight)
+                        Console.Write("\\");
+                } else if (cHight > lHight) {
+                    if (rHight == cHight)
+                        Console.Write("_");
+                }
+
+                xPos++;
+            }
+        }
+
+    }
+
     class Program {
         static void Main(string[] args) {
+            Console.BufferHeight = Console.WindowHeight;
             Console.CursorVisible = false;
+            SnowPile pile = new SnowPile();
             List<Snowflake> flakes = new List<Snowflake>();
 
             Random rng = new Random();
 
-            //generate 100 random flakes
-            for (int i = 0; i < 100; i++) {
-                flakes.Add(new Snowflake());
+            Snowflake tempFlake = null;
+            //generate 100 random flakes in layer order so the top-most layer is always "drawn" on top.
+            for (int i = 0; i < 33; i++) {
+                tempFlake = new Snowflake(-1, -1, 3, -1);
+                tempFlake.ReachedBottom += (o, e) => {
+                    pile.AddFlake(o as Snowflake);
+                };
+                flakes.Add(tempFlake);
+            }
+            for (int i = 0; i < 33; i++) {
+                tempFlake = new Snowflake(-1, -1, 2, -1);
+                tempFlake.ReachedBottom += (o, e) => {
+                    pile.AddFlake(o as Snowflake);
+                    pile.Melt();
+                };
+                flakes.Add(tempFlake);
+            }
+            for (int i = 0; i < 33; i++) {
+                tempFlake = new Snowflake(-1, -1, 1, -1);
+                tempFlake.ReachedBottom += (o, e) => {
+                    pile.AddFlake(o as Snowflake);
+                };
+                flakes.Add(tempFlake);
             }
             //used for debugging movement
             /*int l = 1;
@@ -158,6 +304,8 @@ namespace ConsoleSnowSim {
             }
             //flakes.Add(new Snowflake(20, 0, 2, 0));
             //flakes.Add(new Snowflake(30, 0, 3, 0));*/
+
+            Console.ReadKey();
 
             //wind variables.
             double wind = 0;
@@ -183,6 +331,7 @@ namespace ConsoleSnowSim {
                     } else {
                         spoolWind = false;
                     }
+                //otherwise do the opposite
                 } else if (!spoolWind) {
                     if (maxWind > 0) {
                         if (wind > 0)
@@ -197,11 +346,13 @@ namespace ConsoleSnowSim {
                     }
                 }
 
-                foreach (var flake in flakes) {
+                foreach (var flake in flakes.ToArray()) {
                     flake.Display();
-                    flake.Tick(wind);
+                    flake.Tick(wind, pile.DepthAtFlake(flake));
                 }
-                Thread.Sleep(250);
+
+                pile.Display();
+                //Thread.Sleep(250);
             }
 
         }
