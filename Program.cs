@@ -27,13 +27,13 @@ namespace ConsoleSnowSim {
         public int Weight { set; get; } = 1;
 
         //These are used by the console so i don't have to keep rounding values in code. THis also keeps flakes on screen.
-        public int RoundXPos { get { return (int)Math.Round(xPos) % (Console.WindowWidth - 1); } }
+        public int RoundXPos { get { return (int)Math.Round(xPos) % (Console.WindowWidth - 2); } }
         public int RoundYPos { get { return (int)Math.Round(yPos) % (Console.WindowHeight - 1); } }
 
         public double XPos { 
             set {
                 if (value < 0)
-                    xPos = Console.WindowWidth + value;
+                    xPos = Console.WindowWidth - 1 + value;
                 else
                     xPos = value;
             } 
@@ -61,7 +61,7 @@ namespace ConsoleSnowSim {
         /// <param name="l">Layer, 1-3</param>
         /// <param name="w">Weight, 0-4</param>
         public Snowflake(int x = -1, int y = -1, int l = -1, int w = -1) {
-            XPos = (x == -1 ? rng.Next(0, Console.WindowWidth) : x);
+            XPos = (x == -1 ? rng.Next(0, Console.WindowWidth - 1) : x);
             YPos = (y == -1 ? rng.Next(0, Console.WindowHeight) : y);
             layer = (l == -1 ? rng.Next(1, 4) : l);
             Weight = (w == -1 ? rng.Next(0, flakes.Length) : w);
@@ -109,7 +109,7 @@ namespace ConsoleSnowSim {
         public void Tick(double WindForce = 0, double depth = 0) {
             depthAtFlake = depth;
             //Update old position before over-writing it so we can cleanly erase old snowflake
-            if (updateOldPos || oldXPos >= Console.WindowWidth) {
+            if (updateOldPos || oldXPos >= Console.WindowWidth - 1) {
                 oldXPos = RoundXPos;
                 oldYPos = RoundYPos;
                 updateOldPos = false;
@@ -143,7 +143,7 @@ namespace ConsoleSnowSim {
         /// Creates a screen-sized pile with 0 snow
         /// </summary>
         public SnowPile() {
-            for (int i = 0; i < Console.WindowWidth; i++) {
+            for (int i = 0; i < Console.WindowWidth - 1; i++) {
                 piles.Add(0);
             }
             oldPiles = new List<double>(piles);
@@ -171,7 +171,7 @@ namespace ConsoleSnowSim {
             //Roll-off code. We don't want any one pile to build like a tower, so we distribute it if it gets too tall.
             //This code also wraps around the edges of the screen like everything else.
             int lPos= (pos != 0 ? pos - 1 : piles.Count - 1);
-            int rPos = (pos != Console.WindowWidth -1 ? pos + 1 : 0);
+            int rPos = (pos != Console.WindowWidth - 2 ? pos + 1 : 0);
             while (piles[pos] - piles[lPos] > 2) {
                 piles[lPos]++;
                 piles[pos]--;
@@ -192,7 +192,7 @@ namespace ConsoleSnowSim {
         }
 
         /// <summary>
-        /// Displayes the snow layer.
+        /// Displays the snow layer.
         /// </summary>
         public void Display() {
             int xPos = 0;
@@ -207,20 +207,18 @@ namespace ConsoleSnowSim {
                 //Draw the last snowblock, it's not fully filled so it'll have this effect.
                 Char snow = ' ';
                 double dec = pile - Math.Truncate(pile);
-                //if (dec >= 0.01) {
-                    if (dec < 0.25)
-                        snow = '.';
-                    else if (dec >= 0.25 && dec < 0.5)
-                        snow = '+';
-                    else if (dec >= 0.5 && dec < 0.75)
-                        snow = '%';
-                    else
-                        snow = '#';
+                if (dec < 0.25)
+                    snow = '.';
+                else if (dec >= 0.25 && dec < 0.5)
+                    snow = '+';
+                else if (dec >= 0.5 && dec < 0.75)
+                    snow = '%';
+                else
+                    snow = '#';
 
-                    Console.CursorTop = y;
-                    Console.Write(snow);
-                    Console.CursorLeft -= 1;
-                //}
+                Console.CursorTop = y;
+                Console.Write(snow);
+                Console.CursorLeft -= 1;
 
                 //Draw the top-most smoothing layer.
                 DrawSmoothingLayer(y, xPos);
@@ -268,7 +266,7 @@ namespace ConsoleSnowSim {
             //Here we get the heights of left, current, and right snow pile. This wraps around the screen.
             int lHight = (int)Math.Floor(Pos != 0 ? piles[Pos - 1] : piles[piles.Count - 1]);
             int cHight = (int)Math.Floor(piles[Pos]);
-            int rHight = (int)Math.Floor(Pos != Console.WindowWidth - 1 ? piles[Pos + 1] : piles[Console.WindowWidth - 1]);
+            int rHight = (int)Math.Floor(Pos != Console.WindowWidth - 2 ? piles[Pos + 1] : piles[Console.WindowWidth - 2]);
             //And the logic to determine which symbol to draw. Could probably be done more pragmatically but honestly I don't care lol.
             if (cHight == rHight && lHight == cHight)
                 Console.Write("_");
@@ -297,12 +295,12 @@ namespace ConsoleSnowSim {
         /// Used to update the snow pile lists if the screen gets resized.
         /// </summary>
         public void UpdateScreenSize() {
-            if (Console.WindowWidth > piles.Count) {
-                for (int i = piles.Count; i < Console.WindowWidth; i++) {
+            if (Console.WindowWidth - 1 > piles.Count) {
+                for (int i = piles.Count; i < Console.WindowWidth - 1; i++) {
                     piles.Add(0);
                 }
             } else {
-                piles = new List<double>(piles.GetRange(0, Console.WindowWidth));
+                piles = new List<double>(piles.GetRange(0, Console.WindowWidth - 1));
             }
             oldPiles = new List<double>(piles);
         }
@@ -311,11 +309,10 @@ namespace ConsoleSnowSim {
 
     class Program {
         static void Main(string[] args) {
-            Console.BufferHeight = Console.WindowHeight;
             Console.CursorVisible = false;
             //Setting the buffer size to the window size removes the scroll bars.
             Console.BufferHeight = Console.WindowHeight;
-            Console.BufferWidth = Console.WindowWidth;
+            Console.BufferWidth = Console.WindowWidth ;
 
             SnowPile pile = new SnowPile();
             List<Snowflake> flakes = new List<Snowflake>();
@@ -408,5 +405,65 @@ namespace ConsoleSnowSim {
             }
 
         }
+        public static void PrintLine() { PrintLine(null); }
+        public static void PrintLine(params object[] stuff) { Print(stuff); Console.WriteLine(); }
+        public static void Print(params object[] stuff) {
+            if (stuff == null) {
+                Console.WriteLine();
+                return;
+            }
+
+            ConsoleColor oldf = Console.ForegroundColor;
+            ConsoleColor oldb = Console.BackgroundColor;
+
+            var enumerator = stuff.GetEnumerator();
+
+            while (enumerator.MoveNext()) {
+                Object o = enumerator.Current;
+
+                if (o is ConsoleColor) {
+                    Console.ForegroundColor = ((ConsoleColor)o);
+                    enumerator.MoveNext();
+                    if (enumerator.Current is ConsoleColor) {
+                        Console.BackgroundColor = ((ConsoleColor)enumerator.Current);
+                        enumerator.MoveNext();
+                    }
+                    Console.Write(enumerator.Current.ToString());
+                } else
+                    Console.Write(enumerator.Current.ToString());
+
+                Console.ForegroundColor = oldf;
+                Console.BackgroundColor = oldb;
+            }
+        }
+        public static void DumpException(Exception e) {
+            Func<int, String> getEquals = (count) => {
+                String s = "";
+                for (int i = 0; i < count; i++)
+                    s += "=";
+
+                return s;
+            };
+
+            PrintLine(ConsoleColor.White, ConsoleColor.Red, "====EXCEPTION====");
+            PrintLine(ConsoleColor.White, "=MSG: ", ConsoleColor.Red, e.Message);
+            PrintLine(ConsoleColor.White, "=SRC: ", ConsoleColor.Red, e.Source);
+            PrintLine(ConsoleColor.White, "=TGT: ", ConsoleColor.Red, e.TargetSite);
+            PrintLine(ConsoleColor.White, "=ST : ", ConsoleColor.Red, e.StackTrace);
+            e = e.InnerException;
+            int ind = 1;
+            while (e != null) {
+                String eq = getEquals(ind++);
+                PrintLine(ConsoleColor.White, ConsoleColor.Red, eq + "===EXCEPTION====");
+                PrintLine(ConsoleColor.White, eq + "MSG: ", ConsoleColor.Red, e.Message);
+                PrintLine(ConsoleColor.White, eq + "SRC: ", ConsoleColor.Red, e.Source);
+                PrintLine(ConsoleColor.White, eq + "TGT: ", ConsoleColor.Red, e.TargetSite);
+                PrintLine(ConsoleColor.White, eq + "ST : ", ConsoleColor.Red, e.StackTrace);
+                e = e.InnerException;
+            }
+
+            PrintLine(ConsoleColor.White, ConsoleColor.Red, "=================");
+        }
     }
+
 }
