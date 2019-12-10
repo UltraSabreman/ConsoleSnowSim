@@ -405,65 +405,6 @@ namespace ConsoleSnowSim {
             }
 
         }
-        public static void PrintLine() { PrintLine(null); }
-        public static void PrintLine(params object[] stuff) { Print(stuff); Console.WriteLine(); }
-        public static void Print(params object[] stuff) {
-            if (stuff == null) {
-                Console.WriteLine();
-                return;
-            }
-
-            ConsoleColor oldf = Console.ForegroundColor;
-            ConsoleColor oldb = Console.BackgroundColor;
-
-            var enumerator = stuff.GetEnumerator();
-
-            while (enumerator.MoveNext()) {
-                Object o = enumerator.Current;
-
-                if (o is ConsoleColor) {
-                    Console.ForegroundColor = ((ConsoleColor)o);
-                    enumerator.MoveNext();
-                    if (enumerator.Current is ConsoleColor) {
-                        Console.BackgroundColor = ((ConsoleColor)enumerator.Current);
-                        enumerator.MoveNext();
-                    }
-                    Console.Write(enumerator.Current.ToString());
-                } else
-                    Console.Write(enumerator.Current.ToString());
-
-                Console.ForegroundColor = oldf;
-                Console.BackgroundColor = oldb;
-            }
-        }
-        public static void DumpException(Exception e) {
-            Func<int, String> getEquals = (count) => {
-                String s = "";
-                for (int i = 0; i < count; i++)
-                    s += "=";
-
-                return s;
-            };
-
-            PrintLine(ConsoleColor.White, ConsoleColor.Red, "====EXCEPTION====");
-            PrintLine(ConsoleColor.White, "=MSG: ", ConsoleColor.Red, e.Message);
-            PrintLine(ConsoleColor.White, "=SRC: ", ConsoleColor.Red, e.Source);
-            PrintLine(ConsoleColor.White, "=TGT: ", ConsoleColor.Red, e.TargetSite);
-            PrintLine(ConsoleColor.White, "=ST : ", ConsoleColor.Red, e.StackTrace);
-            e = e.InnerException;
-            int ind = 1;
-            while (e != null) {
-                String eq = getEquals(ind++);
-                PrintLine(ConsoleColor.White, ConsoleColor.Red, eq + "===EXCEPTION====");
-                PrintLine(ConsoleColor.White, eq + "MSG: ", ConsoleColor.Red, e.Message);
-                PrintLine(ConsoleColor.White, eq + "SRC: ", ConsoleColor.Red, e.Source);
-                PrintLine(ConsoleColor.White, eq + "TGT: ", ConsoleColor.Red, e.TargetSite);
-                PrintLine(ConsoleColor.White, eq + "ST : ", ConsoleColor.Red, e.StackTrace);
-                e = e.InnerException;
-            }
-
-            PrintLine(ConsoleColor.White, ConsoleColor.Red, "=================");
-        }
     }
 
 }
