@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace ConsoleSnowSim {
     class Snowflake {
@@ -64,11 +65,13 @@ namespace ConsoleSnowSim {
             layer = l == -1 ? rng.Next(1, 4) : l;
             Weight = w == -1 ? rng.Next(0, flakes.Length) : w;
 
-            switch (layer) {
-                case 1: shade = ConsoleColor.White; break;
-                case 2: shade = ConsoleColor.Gray; break;
-                case 3: shade = ConsoleColor.DarkGray; break;
-            }
+            shade = layer switch
+            {
+                1 => ConsoleColor.White,
+                2 => ConsoleColor.Gray,
+                3 => ConsoleColor.DarkGray,
+                _ => ConsoleColor.Black,
+            };
         }
 
         /// <summary>
@@ -127,7 +130,7 @@ namespace ConsoleSnowSim {
         }
     }
 
-    class SnowPile {
+    internal class SnowPile {
         private List<double> piles = new List<double>();
         private List<double> oldPiles;
 
@@ -298,12 +301,24 @@ namespace ConsoleSnowSim {
         }
     }
 
+    /*internal static partial class Console {
+    
+        public static void Test() {
+
+        }
+    }*/
+
     class Program {
-        static void Main(string[] args) {
+        static void Main() {
+            Console.Clear();
             Console.CursorVisible = false;
             //Setting the buffer size to the window size removes the scroll bars.
             Console.BufferHeight = Console.WindowHeight;
             Console.BufferWidth = Console.WindowWidth;
+
+            //Console.ReadKey();
+             //   return;
+
 
             SnowPile pile = new SnowPile();
             List<Snowflake> flakes = new List<Snowflake>();
@@ -376,8 +391,8 @@ namespace ConsoleSnowSim {
 
                     //Melt a snow block every 10 loops. 
                     //Since it takes 4 flakes to make one block this seems to keep up fairly well on a standard console screen.
-                    //Though I haven't ran this long enough to fully test it, nor do I indend to.
-                    if (tick % 5 == 0)
+                    //Though I haven't ran this long enough to fully test it, nor do I intend to.
+                    if (tick % 2 == 0)
                         pile.Melt();
 
                     pile.Display();
@@ -388,7 +403,7 @@ namespace ConsoleSnowSim {
                     }
 
                     tick++;
-                } catch (ArgumentOutOfRangeException e) {
+                } catch (ArgumentOutOfRangeException) {
                     Console.Clear();
                     Console.CursorVisible = false;
                     Console.BufferHeight = Console.WindowHeight;
