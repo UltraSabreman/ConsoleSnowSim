@@ -313,8 +313,8 @@ namespace ConsoleSnowSim {
             Console.Clear();
             Console.CursorVisible = false;
             //Setting the buffer size to the window size removes the scroll bars.
-            Console.BufferHeight = Console.WindowHeight;
-            Console.BufferWidth = Console.WindowWidth;
+            //Console.BufferHeight = Console.WindowHeight;
+            //Console.BufferWidth = Console.WindowWidth;
 
             //Console.ReadKey();
              //   return;
@@ -406,8 +406,8 @@ namespace ConsoleSnowSim {
                 } catch (ArgumentOutOfRangeException) {
                     Console.Clear();
                     Console.CursorVisible = false;
-                    Console.BufferHeight = Console.WindowHeight;
-                    Console.BufferWidth = Console.WindowWidth;
+                    //Console.BufferHeight = Console.WindowHeight;
+                    //Console.BufferWidth = Console.WindowWidth;
                     pile.UpdateScreenSize();
                 }
             }
